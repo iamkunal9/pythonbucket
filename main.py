@@ -1,8 +1,7 @@
 
-#iamkunal9 HERE!
+# iamkunal9 Here!
 
 from flask import Flask, request
-import requests
 from flask_mysqldb import MySQL
 from yaml import load, FullLoader
 from os import urandom
@@ -10,7 +9,7 @@ from flask import jsonify
 app = Flask(__name__)
 
 mysql = MySQL(app)
-db = load(open('db.yaml'), Loader=FullLoader)
+db = load(open('/home/2021pietcskunal096/mysite/db.yaml'), Loader=FullLoader)
 app.config['MYSQL_HOST'] = db['mysql_host']
 app.config['MYSQL_USER'] = db['mysql_user']
 app.config['MYSQL_PASSWORD'] = db['mysql_password']
@@ -24,19 +23,32 @@ app.config['SECRET_KEY'] = urandom(24)
 #     return response
 @app.route('/')
 def hello_world():
-    return 'Hello from Flask!'
+    return 'Hello World'
 @app.route('/api/v1/bucket/data', methods=['POST'])
 def test():
     bucketid = request.json["bid"]
     mode = request.json["mode"]
     cursor = mysql.connection.cursor()
+    # carrier = request.json["carrier"]
+    # email = request.json["email"]
+    # location = request.json["location"]
     if mode == "create":
         cmd = f"insert into bucket values('{bucketid}','Null');"
     elif mode == "append":
         cursor.execute(f"select * from bucket where bid='{bucketid}'")
         bData = cursor.fetchone()
+        
         bData = bData[1]+" "+request.json["data"]
         cmd = f"update bucket set data='{bData}' where bid='{bucketid}'"
+    elif mode == "nRappend": #No repeat append
+        cursor.execute(f"select * from bucket where bid='{bucketid}'")
+        bData = cursor.fetchone()
+        if str(request.json["data"]) not in bData[1].split(" "):
+            bData = bData[1]+" "+request.json["data"]
+            cmd = f"update bucket set data='{bData}' where bid='{bucketid}'"
+    elif mode == "update":
+        cmd = f"update bucket set data='{bData}' where bid='{bucketid}'"
+
     elif mode == "purge":
         cmd = f"delete from bucket where bid='{bucketid}'"
     elif mode == "remove":
@@ -63,6 +75,8 @@ def test():
 @app.route('/api/v1/bucket/getData/<bid>', methods=['GET'])
 def getData(bid):
     cursor = mysql.connection.cursor()
+    # if oid[:32] != "d842040b1c5dc8c9752e013c75bd48e9":
+    #     return "<h1>UNAUTHORISED</h1>"
 
     cursor.execute(f"select * from bucket where bid='{bid}'")
     bucket_data = cursor.fetchone()
